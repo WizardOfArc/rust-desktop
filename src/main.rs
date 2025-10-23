@@ -4,12 +4,22 @@
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
 use eframe::egui::{self, ViewportCommand};
-use egui::Vec2;
+use egui::{IconData, Vec2};
+
+mod blog;
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
+            .with_icon(IconData {
+                rgba: image::load_from_memory(include_bytes!("../assets/woa_logo_only.png"))
+                    .unwrap()
+                    .to_rgba8()
+                    .to_vec(),
+                width: 400,
+                height: 270,
+            })
             .with_decorations(false) // Hide the OS-specific "chrome" around the window
             .with_inner_size([800.0, 400.0])
             .with_min_inner_size([800.0, 400.0])
@@ -55,11 +65,14 @@ impl eframe::App for MyApp {
             );
             ui.add_space(10.0);
             if ui.button("Publish").clicked() {
-                println!("Title: {}", self.title);
-                let splitted = split_on_line_breaks(&self.content);
-                for line in splitted {
-                    println!(" -> {}", line.trim());
-                }
+                let title = &self.title;
+                let post = blog::Post {
+                    title: title.to_string(),
+                    content: split_on_line_breaks(&self.content),
+                };
+                blog::publish(post);
+                self.title = "".to_string();
+                self.content = "".to_string();
             }
             ui.separator();
             ui.horizontal(|ui| {
