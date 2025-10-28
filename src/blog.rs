@@ -2,16 +2,22 @@ use std::env;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 const POSTS_FILE_VAR_NAME: &str = "BLOG_POSTS_FILE";
 
 type BlogResult<T> = std::result::Result<T, BlogError>;
 
-#[derive(Debug)]
-enum BlogError {
+#[derive(Debug, Error)]
+pub enum BlogError {
+    #[error("Unable to Read Posts File")]
     UnableToReadPostsFile,
+    #[error("Posts file has unparsable JSON")]
     PostsFileUnParsable,
+    #[error("Could not write to or save Posts file")]
     CouldNotWritePostsFile,
+    #[error("Could not find env var: {0}")]
+    EnvVarNotFound(String),
 }
 
 #[derive(Debug)]
@@ -86,12 +92,13 @@ impl Post {
     }
 }
 
-pub fn publish(post: Post) {
+pub fn publish(post: Post) -> BlogResult<bool> {
     let error_fmt = format!(
         "No blog posts file specified - please set the env var:'{}'",
         POSTS_FILE_VAR_NAME
     );
-    let filename = env::var(POSTS_FILE_VAR_NAME).expect(&error_fmt);
+    let filename = env::var(POSTS_FILE_VAR_NAME)
+        .map_err(|e| BlogError::EnvVarNotFound(format!("{}:{}", error_fmt, e.to_string())))?;
     let mut blog_posts =
         BlogPostsForJson::from_file(&filename).unwrap_or_else(|_| BlogPostsForJson {
             posts: vec![],
@@ -104,5 +111,6 @@ pub fn publish(post: Post) {
     blog_posts.add_post(post);
     blog_posts
         .save_to_file(&filename)
-        .expect("Unable to save blog posts");
+        .map_err(|_e| BlogError::CouldNotWritePostsFile)?;
+    Ok(true)
 }

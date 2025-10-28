@@ -35,6 +35,7 @@ fn main() -> eframe::Result {
 }
 
 struct MyApp {
+    result_text: String,
     title: String,
     content: String,
 }
@@ -42,6 +43,7 @@ struct MyApp {
 impl Default for MyApp {
     fn default() -> Self {
         Self {
+            result_text: "".to_owned(),
             title: "Today's Entry".to_owned(),
             content: "Something happend today".to_owned(),
         }
@@ -70,10 +72,15 @@ impl eframe::App for MyApp {
                     title: title.to_string(),
                     content: split_on_line_breaks(&self.content),
                 };
-                blog::publish(post);
+                match blog::publish(post) {
+                    Ok(_) => self.result_text = "Publish successful".to_string(),
+                    Err(e) => self.result_text = e.to_string(),
+                }
                 self.title = "".to_string();
                 self.content = "".to_string();
             }
+            ui.separator();
+            ui.label(self.result_text.clone());
             ui.separator();
             ui.horizontal(|ui| {
                 ui.label("Theme:");
